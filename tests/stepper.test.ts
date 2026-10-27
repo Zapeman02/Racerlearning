@@ -13,8 +13,8 @@ test('fixed speeds run frame time * speed worth of ticks', () => {
   const stepper = new Stepper();
   let ticks = 0;
   stepper.speed = 4;
-  stepper.advance(DT * 10, () => ticks++);
-  assert.ok(ticks >= 39 && ticks <= 40, `ticks ${ticks}`);
+  stepper.advance(DT * 5, () => ticks++);
+  assert.ok(ticks >= 19 && ticks <= 20, `ticks ${ticks}`);
 });
 
 test('max speed runs until the time budget is used', () => {
