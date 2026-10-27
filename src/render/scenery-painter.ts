@@ -55,7 +55,7 @@ export class SceneryPainter {
       { x: x0 + prop.w, y: y0 + prop.h },
       { x: x0, y: y0 + prop.h },
     ];
-    ctx.fillStyle = prop.kind === 'container' ? shadeOf(prop.color, 0.25) : '#0e0a18';
+    ctx.fillStyle = prop.kind === 'container' ? shadeOf(prop.color, 0.25) : shadeOf(prop.color, 0.16);
     for (let i = 0; i < 4; i++) {
       const a = corners[i];
       const b = corners[(i + 1) % 4];
