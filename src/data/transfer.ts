@@ -1,5 +1,6 @@
 import { NeuralNetwork } from '../ai/network.ts';
 import { DEFAULT_REWARDS, REWARD_TERMS } from '../sim/reward.ts';
+import { CORNER_RANGE, TRACK_FEATURES, type TrackFeature } from '../sim/track-factory.ts';
 import type { ModelRecord } from './models.ts';
 import type { TrackRecord } from './tracks.ts';
 
@@ -33,12 +34,20 @@ export function serializeTrack(track: TrackRecord): string {
 export function parseTrack(text: string): TrackRecord {
   const t = unwrap('track', text);
   if (!Number.isInteger(t.seed)) throw new Error('Track file has an invalid seed');
+  const shape = t.shape;
+  const validShape = Number.isInteger(shape?.corners) && shape.corners >= CORNER_RANGE.min && shape.corners <= CORNER_RANGE.max
+    && Number.isFinite(shape.sharpness) && shape.sharpness >= 0 && shape.sharpness <= 1;
   return {
     id: '',
     name: typeof t.name === 'string' ? t.name : 'Imported track',
     seed: t.seed,
     themeId: typeof t.themeId === 'string' ? t.themeId : 'shibuya',
+    ...(validShape && { shape: { corners: shape.corners, sharpness: shape.sharpness, features: parseFeatures(shape.features) } }),
   };
+}
+
+function parseFeatures(value: unknown): TrackFeature[] {
+  return Array.isArray(value) ? TRACK_FEATURES.filter((f) => value.includes(f)) : [];
 }
 
 /** Validates an exported file and returns a model ready to be added to the repository. */

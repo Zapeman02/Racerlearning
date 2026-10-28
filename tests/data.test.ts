@@ -96,6 +96,15 @@ test('export and import round-trip a track', () => {
   assert.equal(repo.all().length, 3);
 });
 
+test('export and import keep a track shape', () => {
+  const repo = new TrackRepository(memoryStore());
+  const shape = { corners: 16, sharpness: 0.8, features: ['chicane' as const, 'hairpin' as const] };
+  const original = repo.create('Twisty', 7, 'akiba', shape);
+  assert.deepEqual(repo.add(parseTrack(serializeTrack(original))).shape, shape);
+  const bad = JSON.stringify({ format: 'racerlearning-track', track: { seed: 7, shape: { corners: 99, sharpness: 0.5 } } });
+  assert.equal(parseTrack(bad).shape, undefined);
+});
+
 test('built-in training track can be exported and imported as a normal track', () => {
   const imported = parseTrack(serializeTrack(TRAINING_TRACK));
   assert.equal(imported.builtIn, undefined);

@@ -262,6 +262,15 @@ input[type='range']::-webkit-slider-thumb {
   box-shadow: 0 0 0 3px rgba(255, 43, 214, 0.5), 0 0 14px rgba(255, 43, 214, 0.8);
 }
 input[type='range']::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255, 43, 214, 0.5), 0 0 14px rgba(255, 43, 214, 0.8); }
+input[type='range'].fill::-webkit-slider-runnable-track { background: linear-gradient(90deg, var(--cyan) calc(var(--fill) * 100%), rgba(0, 240, 255, 0.15) calc(var(--fill) * 100%)); }
+input[type='range'].fill::-moz-range-track { background: linear-gradient(90deg, var(--cyan) calc(var(--fill) * 100%), rgba(0, 240, 255, 0.15) calc(var(--fill) * 100%)); }
+.advanced { display: grid; gap: 10px; margin: 12px 0; }
+.advanced [hidden] { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: rgba(0, 0, 0, 0.35); color: var(--muted); padding: 7px 12px; border-radius: 999px; font-weight: 600; font-size: 12px; }
+.chip.active { background: rgba(255, 43, 214, 0.15); color: var(--pink); border-color: rgba(255, 43, 214, 0.6); box-shadow: 0 0 10px rgba(255, 43, 214, 0.35); }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--pink); }
 
 /* Lists (tracks / race) */
 .list { display: grid; gap: 8px; }
