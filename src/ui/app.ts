@@ -6,6 +6,7 @@ import { Renderer } from '../render/renderer.ts';
 import { h } from './dom.ts';
 import type { AppContext, Screen, ScreenId } from './screen.ts';
 import { GarageScreen } from './screens/garage.ts';
+import { HowScreen } from './screens/how.ts';
 import { RaceScreen } from './screens/race.ts';
 import { TrainScreen } from './screens/train.ts';
 import { TracksScreen } from './screens/tracks.ts';
@@ -43,6 +44,7 @@ export class App {
       train: new TrainScreen(this.context),
       tracks: new TracksScreen(this.context),
       race: new RaceScreen(this.context),
+      how: new HowScreen(this.context),
     };
     this.nav = h('nav', { class: 'tabs', 'data-obstruct': true, 'aria-label': 'Main' },
       ...NAV.map((item) => h('button', { type: 'button', 'data-screen': item.id, onclick: () => this.go(item.id) }, h('span', { class: 'tab-jp' }, item.jp), h('span', {}, item.label))),
@@ -50,7 +52,10 @@ export class App {
     this.content = h('main', { class: 'screen' });
     this.toastEl = h('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
     ui.append(
-      h('header', { class: 'topbar', 'data-obstruct': true }, h('div', { class: 'logo' }, h('span', { class: 'logo-mark' }, 'R'), h('span', {}, 'RACER', h('em', {}, 'LEARNING')))),
+      h('header', { class: 'topbar', 'data-obstruct': true },
+        h('div', { class: 'logo' }, h('span', { class: 'logo-mark' }, 'R'), h('span', {}, 'RACER', h('em', {}, 'LEARNING'))),
+        h('button', { class: 'how-btn', type: 'button', 'data-screen': 'how', 'aria-label': 'How it works', onclick: () => this.go('how') }, h('span', { class: 'how-icon' }, '?'), h('span', { class: 'how-label' }, 'How it works')),
+      ),
       this.nav,
       this.content,
       this.toastEl,
@@ -63,7 +68,7 @@ export class App {
   go(id: ScreenId): void {
     this.current.unmount();
     this.current = this.screens[id];
-    this.nav.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.screen === id));
+    document.querySelectorAll<HTMLElement>('#ui [data-screen]').forEach((b) => b.classList.toggle('active', b.dataset.screen === id));
     document.body.dataset.screen = id;
     this.current.mount(this.content);
   }
