@@ -164,6 +164,26 @@ class UiBase:
         self.page.click('[data-racer="base"]')
         self.assertTrue(self.page.locator('[data-testid="start-race"]').is_disabled())
 
+    def test_how_it_works(self):
+        self.page.click('.how-btn')
+        how = self.page.locator('[data-testid="how"]')
+        self.assertIn("how it works", how.inner_text().lower())
+        self.assertEqual(how.locator(".how-step").count(), 5)
+        self.assertEqual(self.page.locator('[data-testid="diagram"] circle').count(), 16)
+        self.assertIn("active", self.page.locator(".how-btn").get_attribute("class"))
+        self.page.wait_for_timeout(400)
+        self.shot("how")
+        self.page.click('[data-testid="how-train"]')
+        self.assertIn("active", self.page.locator('nav [data-screen="train"]').get_attribute("class"))
+
+    def test_mobile_how_it_works(self):
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.page.click('.how-btn')
+        self.assertFalse(self.page.locator(".how-label").is_visible())
+        self.assertEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
+        self.page.wait_for_timeout(400)
+        self.shot("mobile-how")
+
     def test_mobile_layout(self):
         self.page.set_viewport_size({"width": 390, "height": 844})
         self.page.wait_for_timeout(300)
