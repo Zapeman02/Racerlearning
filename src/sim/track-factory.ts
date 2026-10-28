@@ -39,6 +39,12 @@ export const CORNER_RANGE = { min: 5, max: 18 } as const;
 export class TrackFactory {
   static readonly TRAINING_SEED = 1337;
 
+  /** A random shape with up to two features, for varied practice tracks. */
+  static randomShape(rng: Random): TrackShape {
+    const features = Array.from({ length: rng.int(0, 3) }, () => rng.pick(TRACK_FEATURES));
+    return { corners: rng.int(8, 14), sharpness: rng.range(0.3, 0.8), features: [...new Set(features)] };
+  }
+
   static create(seed: number, shape?: TrackShape): Track {
     const attempts = shape?.features?.length ? MAX_FEATURE_ATTEMPTS : MAX_ATTEMPTS;
     for (let attempt = 0; attempt < attempts; attempt++) {
