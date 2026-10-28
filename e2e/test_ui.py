@@ -145,6 +145,30 @@ class UiBase:
         self.page.click('[data-screen="race"]')
         self.assertIn("Mountain Run", self.page.locator('[data-testid="race-tracks"]').inner_text())
 
+    def test_export_and_import_track(self):
+        self.page.click('nav [data-screen="tracks"]')
+        with self.page.expect_download() as info:
+            self.page.click('[aria-label="Export Training Circuit"]')
+        path = info.value.path()
+        self.assertEqual(json.loads(Path(path).read_text())["format"], "racerlearning-track")
+        with self.page.expect_file_chooser() as chooser:
+            self.page.click('[data-testid="import-track"]')
+        chooser.value.set_files(path)
+        self.page.wait_for_selector('.toast.visible')
+        self.assertIn("Imported Training Circuit", self.page.locator(".toast").inner_text())
+        self.assertEqual(len(self.stored("racerlearning.tracks")), 1)
+        self.assertEqual(self.page.locator('[data-testid="track-list"] .list-item').count(), 2)
+
+    def test_track_import_rejects_model_file(self):
+        self.page.click('nav [data-screen="tracks"]')
+        bad = SHOTS / "model-as-track.json"
+        bad.write_text(json.dumps({"format": "racerlearning-model", "model": {}}))
+        with self.page.expect_file_chooser() as chooser:
+            self.page.click('[data-testid="import-track"]')
+        chooser.value.set_files(str(bad))
+        self.page.wait_for_selector('.toast.visible')
+        self.assertIn("Not a Racerlearning track", self.page.locator(".toast").inner_text())
+
     def test_race_runs_to_results(self):
         self.page.click('[data-screen="race"]')
         self.page.click('[data-testid="laps"] button:has-text("1")')
@@ -183,6 +207,84 @@ class UiBase:
         self.assertEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
         self.page.wait_for_timeout(400)
         self.shot("mobile-how")
+
+    def assert_nav_usable(self):
+        for screen in ["garage", "train", "tracks", "race"]:
+            button = self.page.locator(f'nav [data-screen="{screen}"]')
+            box = button.bounding_box()
+            self.assertIsNotNone(box, f"{screen} tab hidden")
+            hit = self.page.evaluate(
+                "([x, y]) => document.elementFromPoint(x, y)?.closest('[data-screen]')?.dataset.screen ?? null",
+                [box["x"] + box["width"] / 2, box["y"] + box["height"] / 2],
+            )
+            self.assertEqual(hit, screen, f"{screen} tab is covered")
+
+    def test_mobile_nav_works_from_every_screen(self):
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.create_model("Nav")
+        for start in ["garage", "train", "tracks", "race", "how"]:
+            for target in ["garage", "train", "tracks", "race"]:
+                self.page.click(f'#ui [data-screen="{start}"]')
+                self.assert_nav_usable()
+                self.page.click(f'nav [data-screen="{target}"]')
+                self.assertIn("active", self.page.locator(f'nav [data-screen="{target}"]').get_attribute("class"))
+
+    def test_mobile_nav_works_during_and_after_race(self):
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.page.click('nav [data-screen="race"]')
+        self.page.click('[data-testid="laps"] button:has-text("1")')
+        self.page.click('[data-testid="start-race"]')
+        self.page.wait_for_selector(".countdown.visible")
+        self.assert_nav_usable()
+        self.page.click('nav [data-screen="tracks"]')
+        self.page.wait_for_selector('[data-testid="track-list"]')
+        self.page.click('nav [data-screen="race"]')
+        self.page.wait_for_selector('[data-testid="results"]', timeout=40000)
+        self.assert_nav_usable()
+        self.page.click('nav [data-screen="garage"]')
+        self.page.wait_for_selector('[data-model="base"]')
+
+    def test_screenshot_tour(self):
+        for size, prefix in [({"width": 1440, "height": 900}, "tour-desktop"), ({"width": 390, "height": 844}, "tour-mobile")]:
+            self.page.set_viewport_size(size)
+            self.page.evaluate("localStorage.clear()")
+            self.page.reload()
+            self.page.wait_for_selector('[data-model="base"]')
+            self.page.wait_for_timeout(400)
+            self.shot(f"{prefix}-01-garage")
+            self.page.click('[data-testid="new-model"]')
+            self.page.fill('[data-testid="new-name"]', "Tour")
+            self.shot(f"{prefix}-02-create")
+            self.page.click('[data-testid="create-model"]')
+            self.page.wait_for_selector('[data-testid="play"]')
+            self.shot(f"{prefix}-03-train-paused")
+            self.train_one_generation()
+            self.page.click('[data-testid="speed"] button:has-text("1×")')
+            self.page.wait_for_timeout(600)
+            self.shot(f"{prefix}-04-train-running")
+            self.page.click('nav [data-screen="tracks"]')
+            self.page.click('[data-testid="theme"] button:has-text("Akiba Grid")')
+            self.page.click('[data-testid="generate"]')
+            self.page.wait_for_timeout(500)
+            self.shot(f"{prefix}-05-tracks-generated")
+            self.page.click('nav [data-screen="race"]')
+            self.page.wait_for_timeout(300)
+            self.shot(f"{prefix}-06-race-setup")
+            self.page.click('[data-testid="laps"] button:has-text("1")')
+            self.page.click('[data-testid="start-race"]')
+            self.page.wait_for_selector(".countdown.visible")
+            self.page.wait_for_timeout(300)
+            self.shot(f"{prefix}-07-race-countdown")
+            self.page.wait_for_timeout(4500)
+            self.shot(f"{prefix}-08-race-follow")
+            self.page.click('[data-testid="camera-toggle"]')
+            self.page.wait_for_timeout(300)
+            self.shot(f"{prefix}-09-race-overview")
+            self.page.wait_for_selector('[data-testid="results"]', timeout=60000)
+            self.shot(f"{prefix}-10-results")
+            self.page.click('#ui [data-screen="how"]')
+            self.page.wait_for_timeout(400)
+            self.shot(f"{prefix}-11-how")
 
     def test_mobile_layout(self):
         self.page.set_viewport_size({"width": 390, "height": 844})
