@@ -36,6 +36,10 @@ export class TrackRepository {
     return this.collection.upsert({ id: newId(), name: cleanName(name, `Track ${seed % 1000}`), seed, themeId });
   }
 
+  add(track: TrackRecord): TrackRecord {
+    return this.create(track.name, track.seed, track.themeId);
+  }
+
   remove(id: string): void {
     if (id === TRAINING_TRACK.id) throw new Error('The training track is built in');
     this.collection.remove(id);

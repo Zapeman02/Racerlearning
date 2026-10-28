@@ -4,7 +4,8 @@ import { TRAINING_TRACK, type TrackRecord } from '../../data/tracks.ts';
 import { Camera, type Viewport } from '../../render/camera.ts';
 import type { SceneView } from '../../render/renderer.ts';
 import { THEMES, themeById } from '../../render/themes.ts';
-import { segmented } from '../components.ts';
+import { parseTrack, serializeTrack } from '../../data/transfer.ts';
+import { downloadText, pickFile, segmented } from '../components.ts';
 import { DemoDrive } from '../demo-drive.ts';
 import { h } from '../dom.ts';
 import { BaseScreen } from '../screen.ts';
@@ -22,7 +23,10 @@ export class TracksScreen extends BaseScreen {
     const unsaved = !this.preview.id;
     return [
       h('aside', { class: 'panel', 'data-obstruct': true },
-        h('div', { class: 'panel-head' }, h('h2', {}, 'Tracks'), h('span', { class: 'jp' }, 'コース')),
+        h('div', { class: 'panel-head' },
+          h('h2', {}, 'Tracks ', h('span', { class: 'jp' }, 'コース')),
+          h('button', { class: 'btn ghost small', type: 'button', 'data-testid': 'import-track', onclick: () => this.importTrack() }, 'Import'),
+        ),
         h('h3', {}, 'Generate'),
         segmented(THEMES.map((t) => ({ value: t.id, label: t.name })), this.themeId, (id) => (this.themeId = id), 'theme'),
         h('button', { class: 'btn primary wide', type: 'button', 'data-testid': 'generate', onclick: () => this.generate() }, 'Generate new track'),
@@ -49,6 +53,7 @@ export class TracksScreen extends BaseScreen {
         h('strong', {}, track.name),
         h('span', { class: 'meta' }, `${theme.jp} · ${theme.name}`),
       ),
+      h('button', { class: 'btn small ghost', type: 'button', 'aria-label': `Export ${track.name}`, onclick: () => this.export(track) }, 'Export'),
       track.builtIn ? h('span', { class: 'tag' }, 'TRAINING') : h('button', { class: 'btn small ghost danger', type: 'button', 'aria-label': `Delete ${track.name}`, onclick: () => this.remove(track) }, 'Delete'),
     );
   }
@@ -82,6 +87,22 @@ export class TracksScreen extends BaseScreen {
     this.ctx.tracks.remove(track.id);
     if (this.preview.id === track.id) this.show(TRAINING_TRACK);
     else this.render();
+  }
+
+  private export(track: TrackRecord): void {
+    downloadText(`${track.name.replace(/[^\w-]+/g, '_')}.track.json`, serializeTrack(track));
+  }
+
+  private async importTrack(): Promise<void> {
+    const file = await pickFile('.json,application/json');
+    if (!file) return;
+    try {
+      const track = this.ctx.tracks.add(parseTrack(await file.text()));
+      this.ctx.toast(`Imported ${track.name}`);
+      this.show(track);
+    } catch (error) {
+      this.ctx.toast(error instanceof Error ? error.message : 'Import failed');
+    }
   }
 
   private demoFor(preview: Preview): DemoDrive {

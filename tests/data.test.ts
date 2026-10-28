@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { BASE_MODEL, BASE_MODEL_ID, isTrained, ModelRepository } from '../src/data/models.ts';
 import { memoryStore, LocalCollection } from '../src/data/storage.ts';
 import { TRAINING_TRACK, TrackRepository } from '../src/data/tracks.ts';
-import { parseModel, serializeModel } from '../src/data/transfer.ts';
+import { parseModel, parseTrack, serializeModel, serializeTrack } from '../src/data/transfer.ts';
 import { NeuralNetwork } from '../src/ai/network.ts';
 import { DEFAULT_REWARDS } from '../src/sim/reward.ts';
 
@@ -85,4 +85,25 @@ test('tracks: training track is built in, saved tracks persist', () => {
   assert.throws(() => repo.remove(TRAINING_TRACK.id));
   repo.remove(t.id);
   assert.equal(repo.all().length, 1);
+});
+
+test('export and import round-trip a track', () => {
+  const repo = new TrackRepository(memoryStore());
+  const original = repo.create('Night Loop', 4242, 'akiba');
+  const imported = repo.add(parseTrack(serializeTrack(original)));
+  assert.notEqual(imported.id, original.id);
+  assert.deepEqual([imported.name, imported.seed, imported.themeId], ['Night Loop', 4242, 'akiba']);
+  assert.equal(repo.all().length, 3);
+});
+
+test('built-in training track can be exported and imported as a normal track', () => {
+  const imported = parseTrack(serializeTrack(TRAINING_TRACK));
+  assert.equal(imported.builtIn, undefined);
+  assert.equal(imported.seed, TRAINING_TRACK.seed);
+});
+
+test('track import rejects invalid files', () => {
+  assert.throws(() => parseTrack('nope'), /not valid JSON/);
+  assert.throws(() => parseTrack(serializeModel({ ...new ModelRepository(memoryStore()).all()[0] })), /Not a Racerlearning track/);
+  assert.throws(() => parseTrack(JSON.stringify({ format: 'racerlearning-track', track: { seed: 1.5 } })), /invalid seed/);
 });
