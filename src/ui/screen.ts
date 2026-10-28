@@ -3,7 +3,7 @@ import type { TrackRepository } from '../data/tracks.ts';
 import type { SceneView } from '../render/renderer.ts';
 import type { Viewport } from '../render/camera.ts';
 
-export type ScreenId = 'garage' | 'train' | 'tracks' | 'race';
+export type ScreenId = 'garage' | 'train' | 'tracks' | 'race' | 'how';
 
 export interface AppContext {
   models: ModelRepository;
