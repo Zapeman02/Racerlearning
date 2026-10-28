@@ -6,6 +6,10 @@ A neon Tokyo street racing game where you never drive. You train an AI racer by 
 
 ![Garage](docs/screenshots/garage.png)
 
+## Background
+
+One evening I wanted to play a game like this: train your own AI racer by tuning what it gets rewarded for, then race it. It didn't exist anywhere except in my head. Thanks to modern AI, combined with what I've learned in my education (OOP, design patterns, testing), I could build it quickly and with quality in a single evening.
+
 ## How to play
 
 1. **Garage**: create a racer from scratch or fork KAMI-01.
