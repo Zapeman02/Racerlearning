@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { TrackFactory } from '../src/sim/track-factory.ts';
+import { CORNER_RANGE, TRACK_FEATURES, TrackFactory } from '../src/sim/track-factory.ts';
 import { TRACK_WIDTH } from '../src/sim/track.ts';
 import { circleTrack } from './helpers.ts';
 
@@ -17,6 +17,30 @@ test('generated tracks are valid closed loops', () => {
     assert.ok(track.length > 150, `seed ${seed} too short`);
     assert.ok(TrackFactory.isValid(track.points), `seed ${seed} invalid`);
   }
+});
+
+test('shaped tracks stay valid across the slider extremes', () => {
+  for (const corners of [CORNER_RANGE.min, CORNER_RANGE.max]) {
+    for (const sharpness of [0, 1]) {
+      for (let seed = 0; seed < 10; seed++) {
+        const shape = { corners, sharpness };
+        const track = TrackFactory.create(seed, shape);
+        assert.ok(TrackFactory.isValid(track.points), `seed ${seed} ${corners}/${sharpness} invalid`);
+        assert.notDeepEqual(track.points, TrackFactory.create(seed).points);
+      }
+    }
+  }
+});
+
+test('every track feature generates a valid track', () => {
+  for (const feature of TRACK_FEATURES) {
+    for (let seed = 0; seed < 5; seed++) {
+      const track = TrackFactory.create(seed, { corners: 10, sharpness: 0.5, features: [feature] });
+      assert.ok(TrackFactory.isValid(track.points), `${feature} seed ${seed} invalid`);
+    }
+  }
+  const all = TrackFactory.create(1, { corners: 10, sharpness: 0.5, features: [...TRACK_FEATURES] });
+  assert.ok(TrackFactory.isValid(all.points));
 });
 
 test('edges are half a track width from the centerline', () => {

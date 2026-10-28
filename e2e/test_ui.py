@@ -145,6 +145,18 @@ class UiBase:
         self.page.click('[data-screen="race"]')
         self.assertIn("Mountain Run", self.page.locator('[data-testid="race-tracks"]').inner_text())
 
+    def test_advanced_track_saves_shape(self):
+        self.page.click('nav [data-screen="tracks"]')
+        self.assertFalse(self.page.locator('[data-shape="corners"]').is_visible())
+        self.page.check('[data-testid="advanced"]')
+        self.page.fill('[data-shape="corners"]', "16")
+        self.page.fill('[data-shape="sharpness"]', "0.8")
+        self.page.click('[data-feature="hairpin"]')
+        self.page.click('[data-testid="generate"]')
+        self.page.fill('[data-testid="track-name"]', "Twisty")
+        self.page.click('[data-testid="save-track"]')
+        self.assertEqual(self.stored("racerlearning.tracks")[0]["shape"], {"corners": 16, "sharpness": 0.8, "features": ["hairpin"]})
+
     def test_export_and_import_track(self):
         self.page.click('nav [data-screen="tracks"]')
         with self.page.expect_download() as info:

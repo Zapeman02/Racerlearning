@@ -4,6 +4,7 @@ import { TRAINING_TRACK, type TrackRecord } from '../../data/tracks.ts';
 import { Camera, type Viewport } from '../../render/camera.ts';
 import type { SceneView } from '../../render/renderer.ts';
 import { THEMES, themeById } from '../../render/themes.ts';
+import { CORNER_RANGE, TRACK_FEATURES, type TrackFeature, type TrackShape } from '../../sim/track-factory.ts';
 import { parseTrack, serializeTrack } from '../../data/transfer.ts';
 import { downloadText, pickFile, segmented } from '../components.ts';
 import { DemoDrive } from '../demo-drive.ts';
@@ -11,12 +12,23 @@ import { h } from '../dom.ts';
 import { BaseScreen } from '../screen.ts';
 import { worldFor } from '../world.ts';
 
-type Preview = Pick<TrackRecord, 'seed' | 'themeId'> & { id?: string };
+const FEATURE_LABELS: Record<TrackFeature, string> = {
+  straight: 'Long straight',
+  chicane: 'Chicane',
+  hairpin: 'Hairpin',
+  esses: 'Esses',
+  parabolica: 'Parabolica',
+};
+
+type Preview = Pick<TrackRecord, 'seed' | 'themeId' | 'shape'> & { id?: string };
 
 export class TracksScreen extends BaseScreen {
   private readonly camera = new Camera();
   private preview: Preview = TRAINING_TRACK;
   private themeId = THEMES[1].id;
+  private advanced = false;
+  private readonly shape: TrackShape = { corners: 10, sharpness: 0.5 };
+  private readonly features = new Set<TrackFeature>();
   private demo = this.demoFor(this.preview);
 
   protected build(): Node[] {
@@ -29,6 +41,7 @@ export class TracksScreen extends BaseScreen {
         ),
         h('h3', {}, 'Generate'),
         segmented(THEMES.map((t) => ({ value: t.id, label: t.name })), this.themeId, (id) => (this.themeId = id), 'theme'),
+        this.advancedForm(),
         h('button', { class: 'btn primary wide', type: 'button', 'data-testid': 'generate', onclick: () => this.generate() }, 'Generate new track'),
         unsaved ? this.saveForm() : null,
         h('h3', {}, 'Saved'),
@@ -58,11 +71,51 @@ export class TracksScreen extends BaseScreen {
     );
   }
 
+  private advancedForm(): HTMLElement {
+    const toggle = h('input', { type: 'checkbox', checked: this.advanced, 'data-testid': 'advanced' });
+    const sliders = h('div', { class: 'sliders', hidden: !this.advanced },
+      this.slider('Corners', 'Fewer ← → more', CORNER_RANGE.min, CORNER_RANGE.max, 1, 'corners'),
+      this.slider('Sharpness', 'Gentle ← → tight', 0, 1, 0.05, 'sharpness'),
+      h('div', { class: 'chips', 'data-testid': 'features' }, ...TRACK_FEATURES.map((f) => this.chip(f))),
+    );
+    toggle.addEventListener('change', () => {
+      this.advanced = toggle.checked;
+      sliders.hidden = !this.advanced;
+    });
+    return h('div', { class: 'advanced' }, h('label', { class: 'check' }, toggle, 'Advanced mode'), sliders);
+  }
+
+  private chip(feature: TrackFeature): HTMLElement {
+    const on = () => this.features.has(feature);
+    const button = h('button', { class: `chip ${on() ? 'active' : ''}`, type: 'button', 'aria-pressed': on(), 'data-feature': feature }, FEATURE_LABELS[feature]);
+    button.addEventListener('click', () => {
+      if (on()) this.features.delete(feature);
+      else this.features.add(feature);
+      button.classList.toggle('active', on());
+      button.setAttribute('aria-pressed', String(on()));
+    });
+    return button;
+  }
+
+  private slider(label: string, hint: string, min: number, max: number, step: number, key: 'corners' | 'sharpness'): HTMLElement {
+    const format = () => (key === 'corners' ? String(this.shape.corners) : `${Math.round(this.shape.sharpness * 100)}%`);
+    const output = h('output', {}, format());
+    const input = h('input', { type: 'range', class: 'fill', min, max, step, value: this.shape[key], 'aria-label': label, 'data-shape': key });
+    const paint = () => input.style.setProperty('--fill', String((Number(input.value) - min) / (max - min)));
+    paint();
+    input.addEventListener('input', () => {
+      this.shape[key] = Number(input.value);
+      output.textContent = format();
+      paint();
+    });
+    return h('label', { class: 'slider' }, h('span', { class: 'slider-top' }, h('span', {}, label), output), input, h('small', {}, hint));
+  }
+
   private saveForm(): HTMLElement {
     const name = h('input', { class: 'text-input', placeholder: 'Name this track', maxlength: 24, 'data-testid': 'track-name' });
     return h('form', { class: 'create', onsubmit: (e: Event) => {
       e.preventDefault();
-      const saved = this.ctx.tracks.create(name.value, this.preview.seed, this.preview.themeId);
+      const saved = this.ctx.tracks.create(name.value, this.preview.seed, this.preview.themeId, this.preview.shape);
       this.ctx.toast(`Saved ${saved.name}`);
       this.preview = saved;
       this.render();
@@ -73,7 +126,7 @@ export class TracksScreen extends BaseScreen {
   }
 
   private generate(): void {
-    this.show({ seed: randomSeed(), themeId: this.themeId });
+    this.show({ seed: randomSeed(), themeId: this.themeId, ...(this.advanced && { shape: { ...this.shape, features: TRACK_FEATURES.filter((f) => this.features.has(f)) } }) });
   }
 
   private show(preview: Preview): void {

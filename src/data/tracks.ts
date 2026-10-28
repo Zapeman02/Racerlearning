@@ -1,4 +1,4 @@
-import { TrackFactory } from '../sim/track-factory.ts';
+import { TrackFactory, type TrackShape } from '../sim/track-factory.ts';
 import { cleanName, LocalCollection, newId, type KeyValueStore } from './storage.ts';
 
 export interface TrackRecord {
@@ -6,6 +6,7 @@ export interface TrackRecord {
   name: string;
   seed: number;
   themeId: string;
+  shape?: TrackShape;
   builtIn?: boolean;
 }
 
@@ -32,12 +33,12 @@ export class TrackRepository {
     return this.all().find((t) => t.id === id);
   }
 
-  create(name: string, seed: number, themeId: string): TrackRecord {
-    return this.collection.upsert({ id: newId(), name: cleanName(name, `Track ${seed % 1000}`), seed, themeId });
+  create(name: string, seed: number, themeId: string, shape?: TrackShape): TrackRecord {
+    return this.collection.upsert({ id: newId(), name: cleanName(name, `Track ${seed % 1000}`), seed, themeId, ...(shape && { shape }) });
   }
 
   add(track: TrackRecord): TrackRecord {
-    return this.create(track.name, track.seed, track.themeId);
+    return this.create(track.name, track.seed, track.themeId, track.shape);
   }
 
   remove(id: string): void {
