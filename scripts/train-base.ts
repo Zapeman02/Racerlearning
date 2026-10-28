@@ -18,15 +18,20 @@ const evolution = new Evolution(rng, CONFIG);
 const rewards = new RewardFunction(REWARDS);
 const training = TrackFactory.create(TrackFactory.TRAINING_SEED);
 
-const evaluate = (genome: Float32Array, tracks: Track[]) =>
-  tracks.reduce((sum, track) => sum + new Episode(new Agent(controllerFor(genome), track), track, rewards).run(), 0) / tracks.length;
+// Same start slots as Trainer: the circuit alternates pole and second, the practice tracks take one each.
+const evaluate = (genome: Float32Array, tracks: Track[], generation: number) =>
+  tracks.reduce((sum, track, i) => {
+    const { index, lateral } = track.gridSlot(i === 0 ? generation % 2 : (i - 1) % 2);
+    return sum + new Episode(new Agent(controllerFor(genome), track, index, lateral), track, rewards).run();
+  }, 0) / tracks.length;
+const practiceTrack = () => TrackFactory.create(rng.int(0, 1e9), TrackFactory.randomShape(rng));
 
 let population = evolution.seed();
 let best = { genome: population[0], fitness: -Infinity };
 
 for (let generation = 1; generation <= GENERATIONS; generation++) {
-  const tracks = [training, TrackFactory.create(rng.int(0, 1e9)), TrackFactory.create(rng.int(0, 1e9))];
-  const fitness = population.map((genome) => evaluate(genome, tracks));
+  const tracks = [training, practiceTrack(), practiceTrack()];
+  const fitness = population.map((genome) => evaluate(genome, tracks, generation));
   const top = fitness.indexOf(Math.max(...fitness));
   best = { genome: population[top], fitness: fitness[top] };
   console.log(`gen ${generation} best ${best.fitness.toFixed(1)} avg ${(fitness.reduce((a, b) => a + b) / fitness.length).toFixed(1)}`);
