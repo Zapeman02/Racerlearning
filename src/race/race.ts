@@ -27,7 +27,6 @@ interface RaceEvents {
 const COUNTDOWN = 3;
 const RESPAWN_FREEZE = 0.8;
 const STALL_TIME = 4;
-const GRID_GAP = 4;
 export const FINISH_GRACE = 20;
 
 /** A race between neural drivers: countdown, laps, crash respawns and standings. */
@@ -45,9 +44,8 @@ export class Race {
     this.track = track;
     this.laps = laps;
     this.racers = entries.map((entry, i) => {
-      const row = Math.floor(i / 2) + 1;
-      const lateral = (i % 2 === 0 ? -1 : 1) * track.width * 0.22;
-      const agent = new Agent(controllerFor(entry.weights), track, track.length - row * GRID_GAP, lateral);
+      const { index, lateral } = track.gridSlot(i);
+      const agent = new Agent(controllerFor(entry.weights), track, index, lateral);
       return { entry, agent, finishTime: null, frozen: 0 };
     });
     this.racers.forEach((r) => this.lastProgress.set(r, { progress: r.agent.progress, time: 0 }));

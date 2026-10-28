@@ -16,10 +16,13 @@ export function worldFor(record: Pick<TrackRecord, 'seed' | 'themeId' | 'shape'>
   const key = `${record.seed}:${record.themeId}:${JSON.stringify(record.shape ?? null)}`;
   let world = cache.get(key);
   if (!world) {
-    const track = TrackFactory.create(record.seed, record.shape);
-    const theme = themeById(record.themeId);
-    world = { track, theme, scenery: generateScenery(track, theme) };
+    world = worldOf(TrackFactory.create(record.seed, record.shape), themeById(record.themeId));
     cache.set(key, world);
   }
   return world;
+}
+
+/** Uncached, for throwaway tracks such as training's practice tracks. */
+export function worldOf(track: Track, theme: Theme): World {
+  return { track, theme, scenery: generateScenery(track, theme) };
 }

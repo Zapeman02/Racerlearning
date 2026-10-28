@@ -2,6 +2,7 @@ import { boundsOf, type Bounds, type Pose, type Vec } from '../core/math.ts';
 
 export const TRACK_WIDTH = 120;
 export const TRACK_SPACING = 16;
+const GRID_GAP = 4;
 
 export interface TrackHit {
   index: number;
@@ -100,6 +101,12 @@ export class Track {
     if (d > n / 2) d -= n;
     if (d < -n / 2) d += n;
     return d;
+  }
+
+  /** Starting grid position (0 = pole): two cars per row, staggered behind the start line. */
+  gridSlot(slot: number): { index: number; lateral: number } {
+    const row = Math.floor(slot / 2) + 1;
+    return { index: this.length - row * GRID_GAP, lateral: (slot % 2 === 0 ? -1 : 1) * this.width * 0.22 };
   }
 
   poseAt(index: number, lateral = 0): Pose {

@@ -4,6 +4,7 @@ import { Agent } from '../sim/agent.ts';
 import { Episode } from '../sim/episode.ts';
 import { RewardFunction, type RewardWeights } from '../sim/reward.ts';
 import type { Track } from '../sim/track.ts';
+import { TrackFactory } from '../sim/track-factory.ts';
 import { Evolution, type Genome } from './evolution.ts';
 import { controllerFor } from './network.ts';
 
@@ -18,48 +19,65 @@ interface TrainerEvents {
   generation: GenerationStats;
 }
 
-/** Runs a whole population side by side on one track and evolves it between generations. */
+const PRACTICE_TRACKS = 2;
+
+/**
+ * Runs a whole population side by side on the main track plus random practice tracks, and evolves it
+ * on the average fitness so it learns to drive rather than memorise one circuit.
+ */
 export class Trainer {
   readonly events = new Emitter<TrainerEvents>();
   readonly track: Track;
   readonly rewards: RewardFunction;
   generation: number;
-  episodes: Episode[] = [];
+  /** One track per run: the main track first, then this generation's practice tracks. */
+  tracks: Track[] = [];
+  runs: Episode[][] = [];
   private population: Genome[];
   private readonly evolution: Evolution;
+  private readonly rng: Random;
 
   constructor(track: Track, rewards: RewardWeights, rng: Random, base?: ArrayLike<number>, generation = 0) {
     this.track = track;
     this.rewards = new RewardFunction(rewards);
+    this.rng = rng;
     this.evolution = new Evolution(rng);
     this.population = this.evolution.seed(base);
     this.generation = generation;
     this.startGeneration();
   }
 
-  get alive(): number {
-    return this.episodes.filter((e) => !e.done).length;
+  alive(run: number): number {
+    return this.runs[run].filter((e) => !e.done).length;
   }
 
-  /** The best still-running episode, falling back to the best finished one. */
-  get leader(): Episode {
-    return this.episodes.reduce((best, e) => {
+  /** The best still-running episode on a run, falling back to the best finished one. */
+  leader(run: number): Episode {
+    return this.runs[run].reduce((best, e) => {
       if (best.done !== e.done) return e.done ? best : e;
       return e.fitness > best.fitness ? e : best;
     });
   }
 
   tick(): void {
-    for (const episode of this.episodes) episode.step();
-    if (this.episodes.every((e) => e.done)) this.finishGeneration();
+    for (const run of this.runs) for (const episode of run) episode.step();
+    if (this.runs.every((run) => run.every((e) => e.done))) this.finishGeneration();
   }
 
+  /** Start slots alternate between pole and second so neither side of the grid is favoured. */
   private startGeneration(): void {
-    this.episodes = this.population.map((genome) => new Episode(new Agent(controllerFor(genome), this.track), this.track, this.rewards));
+    const practice = Array.from({ length: PRACTICE_TRACKS }, () => TrackFactory.create(this.rng.int(0, 1e9), TrackFactory.randomShape(this.rng)));
+    this.tracks = [this.track, ...practice];
+    this.runs = this.tracks.map((track, i) => this.runOn(track, i === 0 ? this.generation % 2 : (i - 1) % 2));
+  }
+
+  private runOn(track: Track, slot: number): Episode[] {
+    const { index, lateral } = track.gridSlot(slot);
+    return this.population.map((genome) => new Episode(new Agent(controllerFor(genome), track, index, lateral), track, this.rewards));
   }
 
   private finishGeneration(): void {
-    const fitness = this.episodes.map((e) => e.fitness);
+    const fitness = this.population.map((_, i) => this.runs.reduce((sum, run) => sum + run[i].fitness, 0) / this.runs.length);
     const bestIndex = fitness.indexOf(Math.max(...fitness));
     this.generation++;
     this.events.emit('generation', {

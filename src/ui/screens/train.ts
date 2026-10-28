@@ -9,7 +9,7 @@ import { REWARD_RANGE, REWARD_TERMS, type RewardKey } from '../../sim/reward.ts'
 import { drawSparkline, modelMeta, segmented, sparkline } from '../components.ts';
 import { h } from '../dom.ts';
 import { BaseScreen } from '../screen.ts';
-import { worldFor } from '../world.ts';
+import { worldFor, worldOf, type World } from '../world.ts';
 
 const SPEEDS: { value: Speed; label: string }[] = [
   { value: 1, label: '1×' },
@@ -18,8 +18,16 @@ const SPEEDS: { value: Speed; label: string }[] = [
   { value: 'max', label: 'MAX' },
 ];
 
+const VIEWS = [
+  { value: 0, label: 'Circuit' },
+  { value: 1, label: 'Random 1' },
+  { value: 2, label: 'Random 2' },
+];
+
 export class TrainScreen extends BaseScreen {
-  private readonly world = worldFor(TRAINING_TRACK);
+  private readonly training = worldFor(TRAINING_TRACK);
+  private practiceWorld: World | null = null;
+  private view = 0;
   private readonly camera = new Camera();
   private readonly stepper = new Stepper();
   private model: ModelRecord | null = null;
@@ -41,16 +49,24 @@ export class TrainScreen extends BaseScreen {
     this.camera.fit(this.world.track.bounds, view, 24);
     if (!this.trainer || !this.playing) return;
     this.stepper.advance(dt, () => this.trainer!.tick());
-    this.stats.alive.textContent = `${this.trainer.alive}/${this.trainer.episodes.length}`;
+    this.stats.alive.textContent = `${this.trainer.alive(this.view)}/${this.trainer.runs[this.view].length}`;
   }
 
   scene(): SceneView {
-    const leader = this.trainer?.leader;
-    const cars = (this.trainer?.episodes ?? [])
+    const leader = this.trainer?.leader(this.view);
+    const cars = (this.trainer?.runs[this.view] ?? [])
       .filter((e) => !e.done && e !== leader)
       .map((e) => ({ car: e.agent.car, color: this.model!.color, alpha: 0.35 }));
     if (leader && !leader.done) cars.push({ car: leader.agent.car, color: this.model!.color, alpha: 1 });
     return { ...this.world, camera: this.camera, cars, detail: 'low', rays: leader && !leader.done ? leader.agent : null };
+  }
+
+  /** Only the viewed track gets scenery; practice tracks change every generation. */
+  private get world(): World {
+    const track = this.trainer?.tracks[this.view];
+    if (!track || track === this.training.track) return this.training;
+    if (this.practiceWorld?.track !== track) this.practiceWorld = worldOf(track, this.training.theme);
+    return this.practiceWorld;
   }
 
   private pickModel(): ModelRecord | null {
@@ -106,6 +122,7 @@ export class TrainScreen extends BaseScreen {
       h('div', { class: 'controls' },
         this.playButton,
         segmented(SPEEDS, this.stepper.speed, (speed) => (this.stepper.speed = speed), 'speed'),
+        segmented(VIEWS, this.view, (view) => (this.view = view), 'track-view'),
       ),
       h('div', { class: 'stats' },
         stat('generation', 'Gen', String(model.generation)),
