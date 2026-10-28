@@ -10,7 +10,7 @@ import type { Track } from '../src/sim/track.ts';
 
 const GENERATIONS = Number(process.argv[2] ?? 120);
 const OUT = new URL('../src/assets/base-model.json', import.meta.url);
-const REWARDS: RewardWeights = { progress: 4, speed: 1.5, crash: -3, drift: 0, idle: -2, jerk: -0.5 };
+const REWARDS: RewardWeights = { progress: 4, speed: 1.5, finish: 0, crash: -3, drift: 0, idle: -2, jerk: -0.5 };
 const CONFIG: EvolutionConfig = { populationSize: 60, eliteCount: 5, tournamentSize: 4, mutationRate: 0.1, mutationStrength: 0.3 };
 
 const rng = new Random(2026);

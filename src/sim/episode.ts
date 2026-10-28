@@ -27,7 +27,7 @@ export class Episode {
     if (this.done) return;
     this.agent.step(this.track, dt);
     this.time += dt;
-    this.fitness += this.rewards.evaluate(this.agent, dt, this.track.length);
+    this.fitness += this.rewards.evaluate(this.agent, dt, this.track.length, this.time);
     if (this.agent.progress > this.bestProgress + 1) {
       this.bestProgress = this.agent.progress;
       this.lastImprovement = this.time;
