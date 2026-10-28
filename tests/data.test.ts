@@ -25,6 +25,7 @@ test('base model is bundled, trained and read-only', () => {
   assert.equal(repo.all()[0].id, BASE_MODEL_ID);
   assert.ok(isTrained(BASE_MODEL));
   assert.throws(() => repo.rename(BASE_MODEL_ID, 'x'));
+  assert.throws(() => repo.repaint(BASE_MODEL_ID, { color: '#fff' }));
   assert.throws(() => repo.remove(BASE_MODEL_ID));
 });
 
@@ -53,11 +54,13 @@ test('recordGeneration stores weights, fitness and history', () => {
   assert.ok(isTrained(saved));
 });
 
-test('rename and remove user models', () => {
+test('rename, repaint and remove user models', () => {
   const repo = new ModelRepository(memoryStore());
   const m = repo.create('A', '#fff', false);
   assert.equal(repo.rename(m.id, 'Tokyo').name, 'Tokyo');
   assert.equal(repo.rename(m.id, '   ').name, 'Tokyo');
+  const painted = repo.repaint(m.id, { color: '#00f0ff', accent: '#14141a', livery: 'two-tone' });
+  assert.deepEqual([painted.color, painted.accent, painted.livery], ['#00f0ff', '#14141a', 'two-tone']);
   repo.remove(m.id);
   assert.equal(repo.get(m.id), undefined);
 });

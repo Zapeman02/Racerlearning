@@ -1,12 +1,12 @@
 import baseModel from '../assets/base-model.json' with { type: 'json' };
 import { NeuralNetwork } from '../ai/network.ts';
+import type { Paint } from '../render/car-sprites.ts';
 import { DEFAULT_REWARDS, type RewardWeights } from '../sim/reward.ts';
 import { cleanName, LocalCollection, newId, type KeyValueStore } from './storage.ts';
 
-export interface ModelRecord {
+export interface ModelRecord extends Paint {
   id: string;
   name: string;
-  color: string;
   weights: number[] | null;
   rewards: RewardWeights;
   generation: number;
@@ -17,6 +17,7 @@ export interface ModelRecord {
 }
 
 export const MODEL_COLORS = ['#ff2bd6', '#00f0ff', '#ffe600', '#ff7a1a', '#7cff4f', '#9d6bff', '#ffffff'];
+export const ACCENT_COLORS = [...MODEL_COLORS, '#14141a'];
 export const BASE_MODEL_ID = 'base';
 const HISTORY_LIMIT = 300;
 
@@ -86,6 +87,10 @@ export class ModelRepository {
   rename(id: string, name: string): ModelRecord {
     const model = this.editable(id);
     return this.collection.upsert({ ...model, name: cleanName(name, model.name) });
+  }
+
+  repaint(id: string, paint: Partial<Paint>): ModelRecord {
+    return this.collection.upsert({ ...this.editable(id), ...paint });
   }
 
   add(model: ModelRecord): ModelRecord {

@@ -24,7 +24,7 @@ export class DemoDrive {
   }
 
   get cars(): CarView[] {
-    return this.race.racers.map((r) => ({ car: r.agent.car, color: r.entry.color }));
+    return this.race.racers.map((r) => ({ car: r.agent.car, paint: r.entry }));
   }
 
   get leader() {
@@ -34,7 +34,7 @@ export class DemoDrive {
   private newRace(): Race {
     const race = new Race(
       this.track,
-      this.models.map((m) => ({ id: m.id, name: m.name, color: m.color, weights: m.weights! })),
+      this.models.map((m) => ({ id: m.id, name: m.name, color: m.color, accent: m.accent, livery: m.livery, weights: m.weights! })),
       50,
     );
     race.countdown = 0;

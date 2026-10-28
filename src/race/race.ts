@@ -2,12 +2,12 @@ import { Emitter } from '../core/emitter.ts';
 import { controllerFor } from '../ai/network.ts';
 import { Agent } from '../sim/agent.ts';
 import { DT } from '../sim/episode.ts';
+import type { Paint } from '../render/car-sprites.ts';
 import type { Track } from '../sim/track.ts';
 
-export interface RacerEntry {
+export interface RacerEntry extends Paint {
   id: string;
   name: string;
-  color: string;
   weights: ArrayLike<number>;
 }
 

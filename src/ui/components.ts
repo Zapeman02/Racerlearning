@@ -1,5 +1,5 @@
 import type { ModelRecord } from '../data/models.ts';
-import { CarSprites } from '../render/car-sprites.ts';
+import { CarSprites, type Paint } from '../render/car-sprites.ts';
 import { h } from './dom.ts';
 
 const sprites = new CarSprites();
@@ -22,13 +22,13 @@ export function segmented<T extends string | number>(options: { value: T; label:
   return root;
 }
 
-export function carPreview(color: string, width = 76): HTMLCanvasElement {
+export function carPreview(paint: Paint, width = 76): HTMLCanvasElement {
   const { w, h: height } = CarSprites.size;
   const c = h('canvas', { class: 'car-preview', width: width * 2, height: Math.round((width * height) / w) * 2 });
   c.style.width = `${width}px`;
   const g = c.getContext('2d')!;
-  g.drawImage(sprites.get(color).glow, -c.width * 0.45, -c.height * 0.6, c.width * 1.9, c.height * 2.2);
-  g.drawImage(sprites.get(color).body, 0, 0, c.width, c.height);
+  g.drawImage(sprites.get(paint).glow, -c.width * 0.45, -c.height * 0.6, c.width * 1.9, c.height * 2.2);
+  g.drawImage(sprites.get(paint).body, 0, 0, c.width, c.height);
   return c;
 }
 

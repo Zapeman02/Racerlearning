@@ -1,7 +1,8 @@
-import { isTrained, MODEL_COLORS, type ModelRecord } from '../../data/models.ts';
+import { ACCENT_COLORS, isTrained, MODEL_COLORS, type ModelRecord } from '../../data/models.ts';
 import { TRAINING_TRACK } from '../../data/tracks.ts';
 import { parseModel, serializeModel } from '../../data/transfer.ts';
 import { Camera, type Viewport } from '../../render/camera.ts';
+import { LIVERIES, type Paint } from '../../render/car-sprites.ts';
 import type { SceneView } from '../../render/renderer.ts';
 import { carPreview, downloadText, modelMeta, pickFile, segmented } from '../components.ts';
 import { DemoDrive } from '../demo-drive.ts';
@@ -14,6 +15,7 @@ export class GarageScreen extends BaseScreen {
   private readonly camera = new Camera();
   private demo = new DemoDrive(this.world.track, this.ctx.models.all());
   private creating = false;
+  private painting: string | null = null;
   private placed = false;
 
   protected build(): Node[] {
@@ -57,7 +59,7 @@ export class GarageScreen extends BaseScreen {
       this.refresh();
     });
     return h('article', { class: `card ${model.id === this.ctx.activeModelId ? 'selected' : ''}`, 'data-model': model.id, style: `--accent:${model.color}` },
-      carPreview(model.color),
+      carPreview(model),
       h('div', { class: 'card-body' },
         h('div', { class: 'row' }, name, model.builtIn ? h('span', { class: 'tag' }, 'BASE') : null),
         h('p', { class: 'meta' }, modelMeta(model)),
@@ -66,9 +68,11 @@ export class GarageScreen extends BaseScreen {
             ? h('button', { class: 'btn small', type: 'button', onclick: () => this.fork(model) }, 'Fork')
             : h('button', { class: 'btn small primary', type: 'button', 'data-testid': 'train-model', onclick: () => this.train(model) }, 'Train'),
           isTrained(model) ? h('button', { class: 'btn small ghost', type: 'button', onclick: () => this.export(model) }, 'Export') : null,
+          model.builtIn ? null : h('button', { class: 'btn small ghost', type: 'button', 'aria-label': `Repaint ${model.name}`, onclick: () => this.togglePaint(model) }, this.painting === model.id ? 'Done' : 'Paint'),
           model.builtIn ? null : h('button', { class: 'btn small ghost danger', type: 'button', 'aria-label': `Delete ${model.name}`, onclick: () => this.remove(model) }, 'Delete'),
         ),
       ),
+      this.painting === model.id ? this.paintPanel(model) : null,
     );
   }
 
@@ -76,16 +80,7 @@ export class GarageScreen extends BaseScreen {
     let color = MODEL_COLORS[this.ctx.models.all().length % MODEL_COLORS.length];
     let fromBase = false;
     const name = h('input', { class: 'text-input', placeholder: 'Name your racer', maxlength: 24, 'data-testid': 'new-name' });
-    const swatches = h('div', { class: 'swatches' },
-      ...MODEL_COLORS.map((c) => {
-        const swatch = h('button', { class: `swatch ${c === color ? 'active' : ''}`, type: 'button', style: `--c:${c}`, 'aria-label': `Colour ${c}` });
-        swatch.addEventListener('click', () => {
-          color = c;
-          swatches.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s === swatch));
-        });
-        return swatch;
-      }),
-    );
+    const swatches = this.swatches(MODEL_COLORS, color, (c) => (color = c), 'Colour');
     return h('form', { class: 'create', onsubmit: (e: Event) => {
       e.preventDefault();
       const model = this.ctx.models.create(name.value, color, fromBase);
@@ -98,6 +93,42 @@ export class GarageScreen extends BaseScreen {
       segmented([{ value: 'scratch', label: 'From scratch' }, { value: 'base', label: 'Fork KAMI-01' }], 'scratch', (v) => (fromBase = v === 'base')),
       h('button', { class: 'btn primary wide', type: 'submit', 'data-testid': 'create-model' }, 'Create & train'),
     );
+  }
+
+  private swatches(colors: string[], current: string, onPick: (color: string) => void, label: string): HTMLElement {
+    const row = h('div', { class: 'swatches', role: 'group', 'aria-label': label },
+      ...colors.map((c) => {
+        const swatch = h('button', { class: `swatch ${c === current ? 'active' : ''}`, type: 'button', style: `--c:${c}`, 'aria-label': `${label} ${c}` });
+        swatch.addEventListener('click', () => {
+          row.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s === swatch));
+          onPick(c);
+        });
+        return swatch;
+      }),
+    );
+    return row;
+  }
+
+  private togglePaint(model: ModelRecord): void {
+    this.painting = this.painting === model.id ? null : model.id;
+    this.render();
+  }
+
+  private paintPanel(model: ModelRecord): HTMLElement {
+    const liveries = LIVERIES.map((l) => ({ value: l, label: l[0].toUpperCase() + l.slice(1) }));
+    return h('div', { class: 'paint-panel' },
+      h('h3', {}, 'Livery'),
+      segmented(liveries, model.livery ?? 'stripes', (livery) => this.repaint(model, { livery }), 'livery'),
+      h('h3', {}, 'Body'),
+      this.swatches(MODEL_COLORS, model.color, (color) => this.repaint(model, { color }), 'Colour'),
+      h('h3', {}, 'Accent'),
+      this.swatches(ACCENT_COLORS, model.accent ?? '#ffffff', (accent) => this.repaint(model, { accent }), 'Accent'),
+    );
+  }
+
+  private repaint(model: ModelRecord, paint: Partial<Paint>): void {
+    this.ctx.models.repaint(model.id, paint);
+    this.refresh();
   }
 
   private toggleCreate(): void {
