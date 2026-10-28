@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Agent } from '../src/sim/agent.ts';
-import { DT, Episode } from '../src/sim/episode.ts';
+import { DT, EPISODE, Episode } from '../src/sim/episode.ts';
 import { RewardFunction, DEFAULT_REWARDS, type RewardWeights } from '../src/sim/reward.ts';
 import { RAY_LENGTH } from '../src/sim/sensors.ts';
 import { circleTrack, FixedController } from './helpers.ts';
 
-const only = (key: keyof RewardWeights, value = 1): RewardWeights => ({ progress: 0, speed: 0, crash: 0, drift: 0, idle: 0, jerk: 0, [key]: value });
+const only = (key: keyof RewardWeights, value = 1): RewardWeights => ({ progress: 0, speed: 0, finish: 0, crash: 0, drift: 0, idle: 0, jerk: 0, [key]: value });
 
 test('progress increases when driving forward and wraps laps', () => {
   const track = circleTrack(2000, 800);
@@ -49,15 +49,24 @@ test('crash reward fires only when off track', () => {
   const track = circleTrack(600);
   const agent = new Agent(new FixedController(0, 0), track);
   const rewards = new RewardFunction(only('crash', -2));
-  assert.equal(rewards.evaluate(agent, DT, track.length), 0);
+  assert.equal(rewards.evaluate(agent, DT, track.length, 0), 0);
   agent.offTrack = true;
-  assert.equal(rewards.evaluate(agent, DT, track.length), -100);
+  assert.equal(rewards.evaluate(agent, DT, track.length, 0), -100);
+});
+
+test('finish reward pays for time left only once the laps are done', () => {
+  const track = circleTrack(600);
+  const agent = new Agent(new FixedController(0, 0), track);
+  const rewards = new RewardFunction(only('finish', 2));
+  assert.equal(rewards.evaluate(agent, DT, track.length, 30), 0);
+  agent.progress = track.length * EPISODE.laps;
+  assert.equal(rewards.evaluate(agent, DT, track.length, 30), (EPISODE.maxTime - 30) * 10 * 2);
 });
 
 test('idle reward punishes standing still', () => {
   const track = circleTrack(600);
   const agent = new Agent(new FixedController(0, 0), track);
-  assert.ok(new RewardFunction(only('idle', -1)).evaluate(agent, DT, track.length) < 0);
+  assert.ok(new RewardFunction(only('idle', -1)).evaluate(agent, DT, track.length, 0) < 0);
 });
 
 test('episode ends when the agent stalls', () => {
