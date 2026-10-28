@@ -1,20 +1,49 @@
 import { NeuralNetwork } from '../ai/network.ts';
 import { DEFAULT_REWARDS, REWARD_TERMS } from '../sim/reward.ts';
 import type { ModelRecord } from './models.ts';
+import type { TrackRecord } from './tracks.ts';
 
-const FORMAT = 'racerlearning-model';
 const VERSION = 1;
 
+function wrap(kind: 'model' | 'track', record: { id: string; builtIn?: boolean }): string {
+  const { id: _id, builtIn: _builtIn, ...data } = record;
+  return JSON.stringify({ format: `racerlearning-${kind}`, version: VERSION, [kind]: data }, null, 2);
+}
+
+function unwrap(kind: 'model' | 'track', text: string) {
+  let file;
+  try {
+    file = JSON.parse(text);
+  } catch {
+    throw new Error('File is not valid JSON');
+  }
+  if (file?.format !== `racerlearning-${kind}`) throw new Error(`Not a Racerlearning ${kind} file`);
+  return file[kind] ?? {};
+}
+
 export function serializeModel(model: ModelRecord): string {
-  const { id: _id, builtIn: _builtIn, ...data } = model;
-  return JSON.stringify({ format: FORMAT, version: VERSION, model: data }, null, 2);
+  return wrap('model', model);
+}
+
+export function serializeTrack(track: TrackRecord): string {
+  return wrap('track', track);
+}
+
+/** Validates an exported file and returns a track ready to be added to the repository. */
+export function parseTrack(text: string): TrackRecord {
+  const t = unwrap('track', text);
+  if (!Number.isInteger(t.seed)) throw new Error('Track file has an invalid seed');
+  return {
+    id: '',
+    name: typeof t.name === 'string' ? t.name : 'Imported track',
+    seed: t.seed,
+    themeId: typeof t.themeId === 'string' ? t.themeId : 'shibuya',
+  };
 }
 
 /** Validates an exported file and returns a model ready to be added to the repository. */
 export function parseModel(text: string): ModelRecord {
-  const file = JSON.parse(text);
-  if (file?.format !== FORMAT) throw new Error('Not a Racerlearning model file');
-  const m = file.model ?? {};
+  const m = unwrap('model', text);
   if (!Array.isArray(m.weights) || m.weights.length !== NeuralNetwork.weightCount || !m.weights.every(Number.isFinite)) {
     throw new Error('Model file has invalid weights');
   }

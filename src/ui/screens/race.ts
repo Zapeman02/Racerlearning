@@ -157,7 +157,7 @@ export class RaceScreen extends BaseScreen {
         h('p', { class: 'eyebrow' }, '結果'),
         h('h2', {}, `${results[0].entry.name} wins`),
         h('ol', { class: 'results' }, ...results.map((r, i) => h('li', { style: `--accent:${r.entry.color}` },
-          h('span', { class: 'pos' }, ['1st', '2nd', '3rd', '4th'][i]), carPreview(r.entry.color, 48), h('span', { class: 'who' }, r.entry.name), h('span', { class: 'gap' }, formatTime(r.finishTime ?? race.time))))),
+          h('span', { class: 'pos' }, ['1st', '2nd', '3rd', '4th'][i]), carPreview(r.entry.color, 48), h('span', { class: 'who' }, r.entry.name), h('span', { class: 'gap' }, r.finishTime !== null ? formatTime(r.finishTime) : 'DNF')))),
         h('div', { class: 'row' },
           h('button', { class: 'btn primary', type: 'button', onclick: () => this.start() }, 'Rematch'),
           h('button', { class: 'btn ghost', type: 'button', onclick: () => this.exit() }, 'New race'),
