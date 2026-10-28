@@ -3,7 +3,7 @@ import type { Car } from '../sim/car.ts';
 import { RAY_ANGLES } from '../sim/sensors.ts';
 import type { Track } from '../sim/track.ts';
 import { Camera, type Viewport } from './camera.ts';
-import { CarSprites } from './car-sprites.ts';
+import { CarSprites, type Paint } from './car-sprites.ts';
 import type { Effects } from './effects.ts';
 import { SceneryPainter } from './scenery-painter.ts';
 import type { Scenery } from './scenery.ts';
@@ -12,7 +12,7 @@ import { TrackPainter } from './track-painter.ts';
 
 export interface CarView {
   car: Car;
-  color: string;
+  paint: Paint;
   alpha?: number;
 }
 
@@ -65,9 +65,9 @@ export class Renderer {
     }
   }
 
-  private paintCar({ car, color, alpha = 1 }: CarView, detail: 'low' | 'high'): void {
+  private paintCar({ car, paint, alpha = 1 }: CarView, detail: 'low' | 'high'): void {
     const { ctx } = this;
-    const sprite = this.sprites.get(color);
+    const sprite = this.sprites.get(paint);
     const { w, h } = CarSprites.size;
     ctx.save();
     ctx.translate(car.x, car.y);

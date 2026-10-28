@@ -1,4 +1,5 @@
 import { NeuralNetwork } from '../ai/network.ts';
+import { LIVERIES } from '../render/car-sprites.ts';
 import { DEFAULT_REWARDS, REWARD_TERMS } from '../sim/reward.ts';
 import { CORNER_RANGE, TRACK_FEATURES, type TrackFeature } from '../sim/track-factory.ts';
 import type { ModelRecord } from './models.ts';
@@ -61,7 +62,9 @@ export function parseModel(text: string): ModelRecord {
   return {
     id: '',
     name: typeof m.name === 'string' ? m.name : 'Imported',
-    color: typeof m.color === 'string' && /^#[0-9a-f]{6}$/i.test(m.color) ? m.color : '#ffffff',
+    color: isHex(m.color) ? m.color : '#ffffff',
+    ...(isHex(m.accent) && { accent: m.accent }),
+    ...(LIVERIES.includes(m.livery) && { livery: m.livery }),
     weights: m.weights,
     rewards,
     generation: Number.isInteger(m.generation) ? m.generation : 0,
@@ -69,4 +72,8 @@ export function parseModel(text: string): ModelRecord {
     history: Array.isArray(m.history) ? m.history.filter(Number.isFinite) : [],
     createdAt: Date.now(),
   };
+}
+
+function isHex(value: unknown): value is string {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
 }

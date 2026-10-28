@@ -56,8 +56,8 @@ export class TrainScreen extends BaseScreen {
     const leader = this.trainer?.leader(this.view);
     const cars = (this.trainer?.runs[this.view] ?? [])
       .filter((e) => !e.done && e !== leader)
-      .map((e) => ({ car: e.agent.car, color: this.model!.color, alpha: 0.35 }));
-    if (leader && !leader.done) cars.push({ car: leader.agent.car, color: this.model!.color, alpha: 1 });
+      .map((e) => ({ car: e.agent.car, paint: this.model!, alpha: 0.35 }));
+    if (leader && !leader.done) cars.push({ car: leader.agent.car, paint: this.model!, alpha: 1 });
     return { ...this.world, camera: this.camera, cars, detail: 'low', rays: leader && !leader.done ? leader.agent : null };
   }
 

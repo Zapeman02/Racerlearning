@@ -54,7 +54,7 @@ export class RaceScreen extends BaseScreen {
 
   scene(): SceneView {
     const racers = this.race?.racers ?? [];
-    return { ...this.world, camera: this.camera, cars: racers.map((r) => ({ car: r.agent.car, color: r.entry.color })), detail: 'high', effects: this.effects };
+    return { ...this.world, camera: this.camera, cars: racers.map((r) => ({ car: r.agent.car, paint: r.entry })), detail: 'high', effects: this.effects };
   }
 
   private buildSetup(): HTMLElement {
@@ -78,7 +78,7 @@ export class RaceScreen extends BaseScreen {
       h('div', { class: 'racer-grid', 'data-testid': 'race-racers' },
         ...trained.map((m) => {
           const chip = h('button', { class: `racer-chip ${this.selected.has(m.id) ? 'selected' : ''}`, type: 'button', style: `--accent:${m.color}`, 'aria-pressed': this.selected.has(m.id), 'data-racer': m.id },
-            carPreview(m.color, 56), h('span', {}, m.name));
+            carPreview(m, 56), h('span', {}, m.name));
           chip.addEventListener('click', () => {
             if (this.selected.has(m.id)) this.selected.delete(m.id);
             else if (this.selected.size < MAX_RACERS) this.selected.add(m.id);
@@ -140,7 +140,7 @@ export class RaceScreen extends BaseScreen {
   }
 
   private start(): void {
-    const entries = [...this.selected].map((id) => this.ctx.models.get(id)).filter((m) => m && isTrained(m)).map((m) => ({ id: m!.id, name: m!.name, color: m!.color, weights: m!.weights! }));
+    const entries = [...this.selected].map((id) => this.ctx.models.get(id)).filter((m) => m && isTrained(m)).map((m) => ({ id: m!.id, name: m!.name, color: m!.color, accent: m!.accent, livery: m!.livery, weights: m!.weights! }));
     if (!entries.length) return;
     this.race = new Race(this.world.track, entries, this.laps);
     this.followId = entries.find((e) => e.id !== BASE_MODEL_ID)?.id ?? entries[0].id;
@@ -157,7 +157,7 @@ export class RaceScreen extends BaseScreen {
         h('p', { class: 'eyebrow' }, '結果'),
         h('h2', {}, `${results[0].entry.name} wins`),
         h('ol', { class: 'results' }, ...results.map((r, i) => h('li', { style: `--accent:${r.entry.color}` },
-          h('span', { class: 'pos' }, ['1st', '2nd', '3rd', '4th'][i]), carPreview(r.entry.color, 48), h('span', { class: 'who' }, r.entry.name), h('span', { class: 'gap' }, r.finishTime !== null ? formatTime(r.finishTime) : 'DNF')))),
+          h('span', { class: 'pos' }, ['1st', '2nd', '3rd', '4th'][i]), carPreview(r.entry, 48), h('span', { class: 'who' }, r.entry.name), h('span', { class: 'gap' }, r.finishTime !== null ? formatTime(r.finishTime) : 'DNF')))),
         h('div', { class: 'row' },
           h('button', { class: 'btn primary', type: 'button', onclick: () => this.start() }, 'Rematch'),
           h('button', { class: 'btn ghost', type: 'button', onclick: () => this.exit() }, 'New race'),

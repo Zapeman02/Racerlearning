@@ -3,20 +3,31 @@ import { CAR } from '../sim/car.ts';
 const SCALE = 4;
 const PAD = 6;
 
+export const LIVERIES = ['stripes', 'sides', 'two-tone', 'clean'] as const;
+export type Livery = (typeof LIVERIES)[number];
+
+/** How a car looks. Accent and livery are optional so cars saved before liveries keep white twin stripes. */
+export interface Paint {
+  color: string;
+  accent?: string;
+  livery?: Livery;
+}
+
 export interface CarSprite {
   body: HTMLCanvasElement;
   glow: HTMLCanvasElement;
 }
 
-/** Flyweight: one pre-rendered sprite per colour, shared by every car that uses it. */
+/** Flyweight: one pre-rendered sprite per paint job, shared by every car that uses it. */
 export class CarSprites {
   private readonly cache = new Map<string, CarSprite>();
 
-  get(color: string): CarSprite {
-    let sprite = this.cache.get(color);
+  get({ color, accent = '#ffffff', livery = 'stripes' }: Paint): CarSprite {
+    const key = `${color}|${accent}|${livery}`;
+    let sprite = this.cache.get(key);
     if (!sprite) {
-      sprite = { body: drawBody(color), glow: drawGlow(color) };
-      this.cache.set(color, sprite);
+      sprite = { body: drawBody(color, accent, livery), glow: drawGlow(color) };
+      this.cache.set(key, sprite);
     }
     return sprite;
   }
@@ -41,8 +52,39 @@ function shade(hex: string, amount: number): string {
   return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
 }
 
-/** Top-down JDM-style coupe pointing +x: widebody fenders, twin stripes, GT wing. */
-function drawBody(color: string): HTMLCanvasElement {
+function shaded(ctx: CanvasRenderingContext2D, color: string): CanvasGradient {
+  const paint = ctx.createLinearGradient(0, -11, 0, 11);
+  paint.addColorStop(0, shade(color, -0.45));
+  paint.addColorStop(0.5, shade(color, 0.25));
+  paint.addColorStop(1, shade(color, -0.45));
+  return paint;
+}
+
+function drawLivery(ctx: CanvasRenderingContext2D, body: Path2D, accent: string, livery: Livery): void {
+  ctx.save();
+  ctx.clip(body);
+  ctx.fillStyle = shaded(ctx, accent);
+  if (livery === 'stripes') {
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = accent;
+    ctx.fillRect(-22, -3, 44.5, 1.5);
+    ctx.fillRect(-22, 1.5, 44.5, 1.5);
+  } else if (livery === 'sides') {
+    ctx.fillRect(-23, -8.8, 47, 2.8);
+    ctx.fillRect(-23, 6, 47, 2.8);
+  } else if (livery === 'two-tone') {
+    ctx.beginPath();
+    ctx.moveTo(-23, -11);
+    ctx.lineTo(-1, -11);
+    ctx.lineTo(-7, 11);
+    ctx.lineTo(-23, 11);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** Top-down JDM-style coupe pointing +x: widebody fenders, livery in the accent colour, GT wing. */
+function drawBody(color: string, accent: string, livery: Livery): HTMLCanvasElement {
   const { w, h } = CarSprites.size;
   const [c, ctx] = canvas(w, h);
 
@@ -67,16 +109,9 @@ function drawBody(color: string): HTMLCanvasElement {
   body.quadraticCurveTo(-22.5, 10, -22.5, 6);
   body.lineTo(-22.5, -6);
   body.quadraticCurveTo(-22.5, -10, -20, -10);
-  const paint = ctx.createLinearGradient(0, -11, 0, 11);
-  paint.addColorStop(0, shade(color, -0.45));
-  paint.addColorStop(0.5, shade(color, 0.25));
-  paint.addColorStop(1, shade(color, -0.45));
-  ctx.fillStyle = paint;
+  ctx.fillStyle = shaded(ctx, color);
   ctx.fill(body);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.fillRect(-22, -3, 44.5, 1.5);
-  ctx.fillRect(-22, 1.5, 44.5, 1.5);
+  drawLivery(ctx, body, accent, livery);
 
   const glass = ctx.createLinearGradient(8, 0, -14, 0);
   glass.addColorStop(0, '#1b2733');
@@ -93,7 +128,7 @@ function drawBody(color: string): HTMLCanvasElement {
   ctx.lineTo(1, -7.6);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = shade(color, 0.1);
+  ctx.fillStyle = shade(livery === 'clean' ? accent : color, 0.1);
   ctx.fillRect(-9.5, -6.8, 10, 13.6);
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.fillRect(5, -7, 1.2, 14);

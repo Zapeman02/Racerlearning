@@ -200,6 +200,7 @@ h3 { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spa
   border: 1px solid var(--line);
   position: relative;
   overflow: hidden;
+  flex-wrap: wrap;
 }
 .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
 .card.selected { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
@@ -217,6 +218,10 @@ h3 { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spa
 .swatches { display: flex; gap: 8px; }
 .swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; background: var(--c); box-shadow: 0 0 10px var(--c); }
 .swatch.active { border-color: #fff; transform: scale(1.12); }
+.paint-panel { flex-basis: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.paint-panel h3 { margin: 6px 0 0; }
+.paint-panel .swatches { flex-wrap: wrap; gap: 6px; }
+.paint-panel .swatch { width: 26px; height: 26px; }
 
 /* Train */
 .model-chip { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); min-width: 0; }
