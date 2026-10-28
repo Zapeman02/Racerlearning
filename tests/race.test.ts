@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Race, type RacerEntry } from '../src/race/race.ts';
+import { FINISH_GRACE, Race, type RacerEntry } from '../src/race/race.ts';
 import { BASE_MODEL } from '../src/data/models.ts';
 import { NeuralNetwork } from '../src/ai/network.ts';
 import { Random } from '../src/core/random.ts';
@@ -35,4 +35,15 @@ test('race finishes when every racer is done', () => {
   for (let i = 0; i < 60 * 90 && race.phase !== 'finished'; i++) race.tick();
   assert.equal(race.phase, 'finished');
   assert.equal(race.lapOf(race.racers[0]), 1);
+});
+
+test('race ends a grace period after the winner even if others never finish', () => {
+  const parked: RacerEntry = { id: 'parked', name: 'Parked', color: '#00f', weights: new Float32Array(BASE_MODEL.weights!.length) };
+  const race = new Race(TrackFactory.create(TrackFactory.TRAINING_SEED), [base, parked], 1);
+  for (let i = 0; i < 60 * 120 && race.phase !== 'finished'; i++) race.tick();
+  assert.equal(race.phase, 'finished');
+  const [winner, loser] = race.standings();
+  assert.equal(winner.entry.id, 'base');
+  assert.equal(loser.finishTime, null);
+  assert.ok(race.time - winner.finishTime! >= FINISH_GRACE - 0.1);
 });

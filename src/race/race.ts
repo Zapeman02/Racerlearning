@@ -28,6 +28,7 @@ const COUNTDOWN = 3;
 const RESPAWN_FREEZE = 0.8;
 const STALL_TIME = 4;
 const GRID_GAP = 4;
+export const FINISH_GRACE = 20;
 
 /** A race between neural drivers: countdown, laps, crash respawns and standings. */
 export class Race {
@@ -76,7 +77,8 @@ export class Race {
     }
     this.time += dt;
     for (const racer of this.racers) this.stepRacer(racer, dt);
-    if (this.racers.every((r) => r.finishTime !== null)) this.setPhase('finished');
+    const winner = Math.min(...this.racers.map((r) => r.finishTime ?? Infinity));
+    if (this.racers.every((r) => r.finishTime !== null) || this.time - winner >= FINISH_GRACE) this.setPhase('finished');
   }
 
   private stepRacer(racer: Racer, dt: number): void {
