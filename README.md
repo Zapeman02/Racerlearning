@@ -16,6 +16,7 @@ One evening I wanted to play a game like this: train your own AI racer by tuning
 2. **Train**: drag the reward sliders (progress, speed, crash, drift, standing still, jerky steering) and watch 40 cars evolve. Progress saves automatically.
 3. **Tracks**: generate new tracks in four environments and save the ones you like.
 4. **Race**: pick a track, up to four racers and a lap count, then go.
+5. **Share**: hit **Share** on a racer to copy a link. Opening it, or pasting the link or code under **Paste**, adds the exact same model to someone else's garage. No server needed: the whole model travels in the link.
 
 | Training | Race |
 | --- | --- |
@@ -30,7 +31,7 @@ One evening I wanted to play a game like this: train your own AI racer by tuning
 
 ## How it works
 
-Each car sees the road through 7 distance rays plus its speed, slide and the upcoming bend. A tiny neural network (11 → 16 → 2) turns that into steer and throttle. Your sliders define the fitness; each generation the best brains survive and are copied with small mutations. Models and tracks live in your browser (localStorage) and can be exported/imported as JSON.
+Each car sees the road through 7 distance rays plus its speed, slide and the upcoming bend. A tiny neural network (11 → 16 → 2) turns that into steer and throttle. Your sliders define the fitness; each generation the best brains survive and are copied with small mutations. Models and tracks live in your browser (localStorage) and can be exported/imported as JSON. A share code is that same JSON, deflated and base64url-encoded into the link's `#m=` hash, so it never reaches the server.
 
 ## Development
 
