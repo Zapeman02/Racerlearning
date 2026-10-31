@@ -10,7 +10,7 @@ export class DemoDrive {
   race: Race;
   private readonly stepper = new Stepper();
   private readonly track: Track;
-  private readonly models: ModelRecord[];
+  private models: ModelRecord[];
 
   constructor(track: Track, models: ModelRecord[]) {
     this.track = track;
@@ -21,6 +21,17 @@ export class DemoDrive {
   update(dt: number): void {
     this.stepper.advance(dt, () => this.race.tick());
     if (this.race.phase === 'finished') this.race = this.newRace();
+  }
+
+  /** Applies a new paint job without restarting the drive, so the camera keeps following the same spot. */
+  repaint(model: ModelRecord): void {
+    this.models = this.models.map((m) => (m.id === model.id ? model : m));
+    for (const racer of this.race.racers) {
+      if (racer.entry.id !== model.id) continue;
+      racer.entry.color = model.color;
+      racer.entry.accent = model.accent;
+      racer.entry.livery = model.livery;
+    }
   }
 
   get cars(): CarView[] {

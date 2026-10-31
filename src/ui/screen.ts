@@ -45,8 +45,14 @@ export abstract class BaseScreen implements Screen {
     this.root.replaceChildren();
   }
 
+  /** Rebuilds the DOM while keeping scrolled containers where they were. */
   protected render(): void {
+    const scrolled = scrollPositions(this.root);
     this.root.replaceChildren(...this.build());
+    for (const { path, top } of scrolled) {
+      const el = elementAt(this.root, path);
+      if (el) el.scrollTop = top;
+    }
   }
 
   protected onDispose(dispose: () => void): void {
@@ -56,4 +62,26 @@ export abstract class BaseScreen implements Screen {
   protected abstract build(): Node[];
   abstract update(dt: number, view: Viewport): void;
   abstract scene(): SceneView | null;
+}
+
+interface ScrollPosition {
+  path: number[];
+  top: number;
+}
+
+/** Scrolled elements under root, addressed by child-index path so they can be found again after a rebuild. */
+function scrollPositions(root: Element): ScrollPosition[] {
+  const found: ScrollPosition[] = [];
+  const visit = (el: Element, path: number[]) => {
+    if (el.scrollTop > 0) found.push({ path, top: el.scrollTop });
+    Array.from(el.children).forEach((child, i) => visit(child, [...path, i]));
+  };
+  visit(root, []);
+  return found;
+}
+
+function elementAt(root: Element, path: number[]): Element | undefined {
+  let el: Element | undefined = root;
+  for (const i of path) el = el?.children[i];
+  return el;
 }
