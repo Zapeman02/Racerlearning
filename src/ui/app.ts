@@ -1,4 +1,5 @@
 import { ModelRepository } from '../data/models.ts';
+import { decodeShareCode, extractCode, SHARE_PARAM } from '../data/share.ts';
 import { TrackRepository } from '../data/tracks.ts';
 import type { KeyValueStore } from '../data/storage.ts';
 import type { Viewport } from '../render/camera.ts';
@@ -62,6 +63,8 @@ export class App {
     );
     this.current = this.screens.garage;
     this.go('garage');
+    void this.importSharedModel();
+    window.addEventListener('hashchange', () => void this.importSharedModel());
     requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -98,6 +101,22 @@ export class App {
       else view.left = Math.max(view.left, r.right);
     });
     return view;
+  }
+
+  /** Opening a share link (`#m=<code>`) adds that model to the garage, then clears the hash. */
+  private async importSharedModel(): Promise<void> {
+    if (!location.hash.includes(`${SHARE_PARAM}=`)) return;
+    const code = extractCode(location.hash);
+    history.replaceState(null, '', location.pathname + location.search);
+    if (!code) return;
+    try {
+      const model = this.context.models.add(await decodeShareCode(code));
+      this.context.activeModelId = model.id;
+      this.go('garage');
+      this.toast(`Added shared racer ${model.name}`);
+    } catch (error) {
+      this.toast(error instanceof Error ? error.message : 'Could not read the share link');
+    }
   }
 
   private toast(message: string): void {

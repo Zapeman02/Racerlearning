@@ -1,5 +1,6 @@
 import { ACCENT_COLORS, isTrained, MODEL_COLORS, type ModelRecord } from '../../data/models.ts';
 import { TRAINING_TRACK } from '../../data/tracks.ts';
+import { decodeShareCode, encodeShareCode, shareLink } from '../../data/share.ts';
 import { parseModel, serializeModel } from '../../data/transfer.ts';
 import { Camera, type Viewport } from '../../render/camera.ts';
 import { LIVERIES, type Paint } from '../../render/car-sprites.ts';
@@ -15,6 +16,7 @@ export class GarageScreen extends BaseScreen {
   private readonly camera = new Camera();
   private demo = new DemoDrive(this.world.track, this.ctx.models.all());
   private creating = false;
+  private pasting = false;
   private painting: string | null = null;
   private placed = false;
 
@@ -31,10 +33,12 @@ export class GarageScreen extends BaseScreen {
           h('h2', {}, 'Garage'),
           h('div', { class: 'row' },
             h('button', { class: 'btn ghost small', type: 'button', onclick: () => this.importModel() }, 'Import'),
+            h('button', { class: 'btn ghost small', type: 'button', 'data-testid': 'paste-model', onclick: () => this.togglePaste() }, this.pasting ? 'Cancel' : 'Paste'),
             h('button', { class: 'btn primary small', type: 'button', 'data-testid': 'new-model', onclick: () => this.toggleCreate() }, this.creating ? 'Cancel' : '+ New racer'),
           ),
         ),
         this.creating ? this.createForm() : null,
+        this.pasting ? this.pasteForm() : null,
         h('div', { class: 'cards', 'data-testid': 'model-list' }, ...models.map((m) => this.card(m))),
       ),
     ];
@@ -68,6 +72,7 @@ export class GarageScreen extends BaseScreen {
             ? h('button', { class: 'btn small', type: 'button', onclick: () => this.fork(model) }, 'Fork')
             : h('button', { class: 'btn small primary', type: 'button', 'data-testid': 'train-model', onclick: () => this.train(model) }, 'Train'),
           isTrained(model) ? h('button', { class: 'btn small ghost', type: 'button', onclick: () => this.export(model) }, 'Export') : null,
+          isTrained(model) ? h('button', { class: 'btn small ghost', type: 'button', 'aria-label': `Share ${model.name}`, onclick: () => this.share(model) }, 'Share') : null,
           model.builtIn ? null : h('button', { class: 'btn small ghost', type: 'button', 'aria-label': `Repaint ${model.name}`, onclick: () => this.togglePaint(model) }, this.painting === model.id ? 'Done' : 'Paint'),
           model.builtIn ? null : h('button', { class: 'btn small ghost danger', type: 'button', 'aria-label': `Delete ${model.name}`, onclick: () => this.remove(model) }, 'Delete'),
         ),
@@ -92,6 +97,24 @@ export class GarageScreen extends BaseScreen {
       swatches,
       segmented([{ value: 'scratch', label: 'From scratch' }, { value: 'base', label: 'Fork KAMI-01' }], 'scratch', (v) => (fromBase = v === 'base')),
       h('button', { class: 'btn primary wide', type: 'submit', 'data-testid': 'create-model' }, 'Create & train'),
+    );
+  }
+
+  private pasteForm(): HTMLElement {
+    const code = h('input', { class: 'text-input', placeholder: 'Paste a share link or code', 'data-testid': 'paste-code', autocomplete: 'off' });
+    return h('form', { class: 'create', onsubmit: async (e: Event) => {
+      e.preventDefault();
+      try {
+        const model = this.ctx.models.add(await decodeShareCode(code.value));
+        this.pasting = false;
+        this.ctx.toast(`Added ${model.name}`);
+        this.refresh();
+      } catch (error) {
+        this.ctx.toast(error instanceof Error ? error.message : 'Could not read the code');
+      }
+    } },
+      code,
+      h('button', { class: 'btn primary wide', type: 'submit', 'data-testid': 'paste-submit' }, 'Add racer'),
     );
   }
 
@@ -131,8 +154,16 @@ export class GarageScreen extends BaseScreen {
     this.render();
   }
 
+  private togglePaste(): void {
+    this.pasting = !this.pasting;
+    this.creating = false;
+    this.render();
+    this.root.querySelector<HTMLInputElement>('[data-testid="paste-code"]')?.focus();
+  }
+
   private toggleCreate(): void {
     this.creating = !this.creating;
+    this.pasting = false;
     this.render();
     this.root.querySelector<HTMLInputElement>('[data-testid="new-name"]')?.focus();
   }
@@ -151,6 +182,16 @@ export class GarageScreen extends BaseScreen {
 
   private export(model: ModelRecord): void {
     downloadText(`${model.name.replace(/[^\w-]+/g, '_')}.racer.json`, serializeModel(model));
+  }
+
+  private async share(model: ModelRecord): Promise<void> {
+    const link = shareLink(await encodeShareCode(model), location.href);
+    try {
+      await navigator.clipboard.writeText(link);
+      this.ctx.toast(`Share link for ${model.name} copied`);
+    } catch {
+      prompt('Copy this share link', link);
+    }
   }
 
   private remove(model: ModelRecord): void {
