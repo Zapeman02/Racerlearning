@@ -118,6 +118,21 @@ class UiBase:
         self.assertEqual(self.stored("racerlearning.models"), [])
         self.assertEqual(self.page.locator(f'[data-model="{model_id}"]').count(), 0)
 
+    def test_paint_keeps_scroll_and_demo_drive(self):
+        for name in ["One", "Two", "Three", "Four"]:
+            self.page.click('[data-model="base"] button:has-text("Fork")')
+        self.page.set_viewport_size({"width": 1440, "height": 600})
+        model_id = self.stored("racerlearning.models")[-1]["id"]
+        self.page.click(f'[data-model="{model_id}"] button:has-text("Paint")')
+        panel = self.page.locator(".panel")
+        panel.evaluate("el => el.scrollTop = el.scrollHeight")
+        scroll = panel.evaluate("el => el.scrollTop")
+        self.assertGreater(scroll, 0)
+        self.page.wait_for_timeout(1500)
+        self.page.click(f'[data-model="{model_id}"] [aria-label="Colour #7cff4f"]')
+        self.assertEqual(panel.evaluate("el => el.scrollTop"), scroll)
+        self.assertEqual(self.stored("racerlearning.models")[-1]["color"], "#7cff4f")
+
     def test_export_and_import_model(self):
         with self.page.expect_download() as info:
             self.page.click('[data-model="base"] button:has-text("Export")')

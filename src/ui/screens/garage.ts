@@ -127,8 +127,8 @@ export class GarageScreen extends BaseScreen {
   }
 
   private repaint(model: ModelRecord, paint: Partial<Paint>): void {
-    this.ctx.models.repaint(model.id, paint);
-    this.refresh();
+    this.demo.repaint(this.ctx.models.repaint(model.id, paint));
+    this.render();
   }
 
   private toggleCreate(): void {
