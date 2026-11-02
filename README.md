@@ -16,7 +16,7 @@ One evening I wanted to play a game like this: train your own AI racer by tuning
 2. **Train**: drag the reward sliders (progress, speed, crash, drift, standing still, jerky steering) and watch 40 cars evolve. Progress saves automatically.
 3. **Tracks**: generate new tracks in four environments and save the ones you like.
 4. **Race**: pick a track, up to four racers and a lap count, then go.
-5. **Share**: hit **Share** on a racer to copy a link. Opening it, or pasting the link or code under **Paste**, adds the exact same model to someone else's garage. No server needed: the whole model travels in the link.
+5. **Share**: hit **Share** on a racer to copy a share code. Pasting it under **Import** adds the exact same model to someone else's garage. Import also takes old share links and exported JSON files. No server needed: the whole model travels in the code.
 
 | Training | Race |
 | --- | --- |

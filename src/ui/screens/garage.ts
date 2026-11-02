@@ -1,6 +1,6 @@
 import { ACCENT_COLORS, isTrained, MODEL_COLORS, type ModelRecord } from '../../data/models.ts';
 import { TRAINING_TRACK } from '../../data/tracks.ts';
-import { decodeShareCode, encodeShareCode, shareLink } from '../../data/share.ts';
+import { decodeShareCode, encodeShareCode } from '../../data/share.ts';
 import { parseModel, serializeModel } from '../../data/transfer.ts';
 import { Camera, type Viewport } from '../../render/camera.ts';
 import { LIVERIES, type Paint } from '../../render/car-sprites.ts';
@@ -16,7 +16,7 @@ export class GarageScreen extends BaseScreen {
   private readonly camera = new Camera();
   private demo = new DemoDrive(this.world.track, this.ctx.models.all());
   private creating = false;
-  private pasting = false;
+  private importing = false;
   private painting: string | null = null;
   private placed = false;
 
@@ -32,13 +32,12 @@ export class GarageScreen extends BaseScreen {
         h('div', { class: 'panel-head' },
           h('h2', {}, 'Garage'),
           h('div', { class: 'row' },
-            h('button', { class: 'btn ghost small', type: 'button', onclick: () => this.importModel() }, 'Import'),
-            h('button', { class: 'btn ghost small', type: 'button', 'data-testid': 'paste-model', onclick: () => this.togglePaste() }, this.pasting ? 'Cancel' : 'Paste'),
+            h('button', { class: 'btn ghost small', type: 'button', 'data-testid': 'import-model', onclick: () => this.toggleImport() }, this.importing ? 'Cancel' : 'Import'),
             h('button', { class: 'btn primary small', type: 'button', 'data-testid': 'new-model', onclick: () => this.toggleCreate() }, this.creating ? 'Cancel' : '+ New racer'),
           ),
         ),
         this.creating ? this.createForm() : null,
-        this.pasting ? this.pasteForm() : null,
+        this.importing ? this.importForm() : null,
         h('div', { class: 'cards', 'data-testid': 'model-list' }, ...models.map((m) => this.card(m))),
       ),
     ];
@@ -100,13 +99,13 @@ export class GarageScreen extends BaseScreen {
     );
   }
 
-  private pasteForm(): HTMLElement {
-    const code = h('input', { class: 'text-input', placeholder: 'Paste a share link or code', 'data-testid': 'paste-code', autocomplete: 'off' });
+  private importForm(): HTMLElement {
+    const code = h('input', { class: 'text-input', placeholder: 'Paste a share code or link', 'data-testid': 'paste-code', autocomplete: 'off' });
     return h('form', { class: 'create', onsubmit: async (e: Event) => {
       e.preventDefault();
       try {
         const model = this.ctx.models.add(await decodeShareCode(code.value));
-        this.pasting = false;
+        this.importing = false;
         this.ctx.toast(`Added ${model.name}`);
         this.refresh();
       } catch (error) {
@@ -115,6 +114,7 @@ export class GarageScreen extends BaseScreen {
     } },
       code,
       h('button', { class: 'btn primary wide', type: 'submit', 'data-testid': 'paste-submit' }, 'Add racer'),
+      h('button', { class: 'btn ghost wide', type: 'button', 'data-testid': 'import-file', onclick: () => this.importModel() }, 'Upload JSON file'),
     );
   }
 
@@ -154,8 +154,8 @@ export class GarageScreen extends BaseScreen {
     this.render();
   }
 
-  private togglePaste(): void {
-    this.pasting = !this.pasting;
+  private toggleImport(): void {
+    this.importing = !this.importing;
     this.creating = false;
     this.render();
     this.root.querySelector<HTMLInputElement>('[data-testid="paste-code"]')?.focus();
@@ -163,7 +163,7 @@ export class GarageScreen extends BaseScreen {
 
   private toggleCreate(): void {
     this.creating = !this.creating;
-    this.pasting = false;
+    this.importing = false;
     this.render();
     this.root.querySelector<HTMLInputElement>('[data-testid="new-name"]')?.focus();
   }
@@ -185,12 +185,12 @@ export class GarageScreen extends BaseScreen {
   }
 
   private async share(model: ModelRecord): Promise<void> {
-    const link = shareLink(await encodeShareCode(model), location.href);
+    const code = await encodeShareCode(model);
     try {
-      await navigator.clipboard.writeText(link);
-      this.ctx.toast(`Share link for ${model.name} copied`);
+      await navigator.clipboard.writeText(code);
+      this.ctx.toast(`Share code for ${model.name} copied. Paste it under Import`);
     } catch {
-      prompt('Copy this share link', link);
+      prompt('Copy this share code', code);
     }
   }
 
@@ -206,6 +206,7 @@ export class GarageScreen extends BaseScreen {
     if (!file) return;
     try {
       const model = this.ctx.models.add(parseModel(await file.text()));
+      this.importing = false;
       this.ctx.toast(`Imported ${model.name}`);
       this.refresh();
     } catch (error) {
