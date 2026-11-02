@@ -71,6 +71,7 @@ export class HowScreen extends BaseScreen {
         h('div', { class: 'row how-cta' },
           h('button', { class: 'btn primary', type: 'button', 'data-testid': 'how-train', onclick: () => this.ctx.go('train') }, 'Start training'),
           h('button', { class: 'btn ghost', type: 'button', onclick: () => this.ctx.go('garage') }, 'Back to garage'),
+          h('a', { class: 'btn ghost', href: 'https://github.com/Zapeman02/Racerlearning/issues', target: '_blank', rel: 'noopener', 'data-testid': 'how-feedback' }, 'Feedback & bugs'),
         ),
       ),
     ];
