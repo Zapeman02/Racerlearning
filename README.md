@@ -1,6 +1,6 @@
 # Racerlearning
 
-**Play: https://zapeman02.github.io/Racerlearning/**
+**Play: https://zapeman02.itch.io/racerlearning**
 
 A neon Tokyo street racing game where you never drive. You train an AI racer by tuning what it gets rewarded for, watch it learn through neuroevolution, then race it against the built-in base model **KAMI-01** on generated tracks.
 
