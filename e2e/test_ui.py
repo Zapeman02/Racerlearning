@@ -138,31 +138,32 @@ class UiBase:
             self.page.click('[data-model="base"] button:has-text("Export")')
         path = info.value.path()
         self.assertEqual(json.loads(Path(path).read_text())["format"], "racerlearning-model")
+        self.page.click('[data-testid="import-model"]')
         with self.page.expect_file_chooser() as chooser:
-            self.page.click('button:has-text("Import")')
+            self.page.click('[data-testid="import-file"]')
         chooser.value.set_files(path)
         self.page.wait_for_selector('.toast.visible')
         self.assertIn("Imported KAMI-01", self.page.locator(".toast").inner_text())
         self.assertEqual(len(self.stored("racerlearning.models")), 1)
 
-    def copied_share_link(self, model_id):
+    def copied_share_code(self, model_id):
         self.page.evaluate("navigator.clipboard.writeText = async (text) => { window.__copied = text }")
         self.page.click(f'[data-model="{model_id}"] button:has-text("Share")')
         self.page.wait_for_function("window.__copied")
         return self.page.evaluate("window.__copied")
 
-    def test_share_link_and_pasted_code_give_same_model(self):
-        link = self.copied_share_link("base")
-        self.assertIn("#m=", link)
+    def test_share_code_and_link_give_same_model(self):
+        code = self.copied_share_code("base")
+        self.assertNotIn("#", code)
         base = self.page.evaluate("fetch('/src/assets/base-model.json').then(r => r.json())")
-        self.page.click('[data-testid="paste-model"]')
-        self.page.fill('[data-testid="paste-code"]', link.split("#m=")[1])
+        self.page.click('[data-testid="import-model"]')
+        self.page.fill('[data-testid="paste-code"]', code)
         self.page.click('[data-testid="paste-submit"]')
-        self.page.wait_for_selector('.toast.visible')
+        self.page.wait_for_selector('.toast.visible:has-text("Added")')
         pasted = self.stored("racerlearning.models")
         self.assertEqual(len(pasted), 1)
         self.assertEqual(pasted[0]["weights"], base["weights"])
-        self.page.goto(link)
+        self.page.goto(f"{self.page.url.split('#')[0]}#m={code}")
         self.page.wait_for_function("JSON.parse(localStorage.getItem('racerlearning.models') || '[]').length === 2")
         opened = self.stored("racerlearning.models")[1]
         self.assertEqual({k: v for k, v in opened.items() if k not in ("id", "createdAt")},
@@ -170,7 +171,7 @@ class UiBase:
         self.assertEqual(self.page.evaluate("location.hash"), "")
 
     def test_paste_rejects_bad_code(self):
-        self.page.click('[data-testid="paste-model"]')
+        self.page.click('[data-testid="import-model"]')
         self.page.fill('[data-testid="paste-code"]', "abc123")
         self.page.click('[data-testid="paste-submit"]')
         self.page.wait_for_selector('.toast.visible')
@@ -180,8 +181,9 @@ class UiBase:
     def test_import_rejects_bad_file(self):
         bad = SHOTS / "bad.json"
         bad.write_text('{"hello": 1}')
+        self.page.click('[data-testid="import-model"]')
         with self.page.expect_file_chooser() as chooser:
-            self.page.click('button:has-text("Import")')
+            self.page.click('[data-testid="import-file"]')
         chooser.value.set_files(str(bad))
         self.page.wait_for_selector('.toast.visible')
         self.assertIn("Not a Racerlearning model", self.page.locator(".toast").inner_text())

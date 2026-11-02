@@ -28,7 +28,7 @@ When your racer is ready, put it up against the base model KAMI-01 on freshly ge
 - Generate tracks in four environments
 - Race up to four AI racers
 - Repaint your car with liveries and accent colours
-- Share your trained racer with a link or code and challenge friends
+- Share your trained racer with a code and challenge friends
 - Export/import your trained models as JSON
 
 Each car sees the road through 7 distance rays and is driven by a tiny neural network (11 → 16 → 2). No ML library, just TypeScript and Canvas.
